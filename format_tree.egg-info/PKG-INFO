@@ -1,10 +1,12 @@
 Metadata-Version: 2.4
 Name: format_tree
-Version: 0.1.1
+Version: 0.1.2
 Summary: A utility to plot decision trees with formatted node information.
-Home-page: https://pypi.org/project/format_tree/
+Home-page: https://github.com/kk715/format_tree
 Author: Kathy G
 Author-email: kguo715@gmail.com
+Project-URL: Documentation, https://pypi.org/project/format_tree/
+Project-URL: Source, https://github.com/kk715/format_tree
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
@@ -21,6 +23,7 @@ Dynamic: description
 Dynamic: description-content-type
 Dynamic: home-page
 Dynamic: license-file
+Dynamic: project-url
 Dynamic: requires-dist
 Dynamic: requires-python
 Dynamic: summary
