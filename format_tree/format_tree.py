@@ -1,7 +1,9 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import re
 from sklearn.tree import plot_tree
+from typing import List, Optional, Tuple
 
 def plot_formatted_tree(
     decision_tree, 
@@ -220,3 +222,130 @@ def get_nulls_in_leaf_nodes(decision_tree, X, df, leaf_column, columns_to_check)
     nulls_in_leaf_nodes = check_nulls_in_leaf_nodes(df_copy, leaf_column, columns_to_check)
     
     return nulls_in_leaf_nodes
+
+
+def format_threshold(x):
+    """
+    Format a floating-point number to a string with up to four decimal places, 
+    removing any trailing zeros and the decimal point if not needed.
+
+    Parameters:
+        x (float): The number to format.
+
+    Returns:
+        str: The formatted string representation of the number.
+    """
+    # Format the number to a string with four decimal places
+    s = f"{x:.4f}"
+    # Remove trailing zeros and the decimal point if necessary
+    if '.' in s:
+        s = s.rstrip('0').rstrip('.')
+    return s
+
+
+def format_threshold(x: float) -> str:
+    """
+    Format a floating-point number to a string with up to four decimal places,
+    removing any trailing zeros and the decimal point if not needed.
+
+    Parameters:
+        x (float): The number to format.
+
+    Returns:
+        str: The formatted string representation of the number.
+    """
+    # Format the number to a string with four decimal places
+    s = f"{x:.4f}"
+    # Remove trailing zeros and the decimal point if necessary
+    if '.' in s:
+        s = s.rstrip('0').rstrip('.')
+    return s
+
+def summarize_tree(clf,
+                   feature_names: Optional[List[str]] = None,
+                   class_list: Optional[List[str]] = None) -> pd.DataFrame:
+    """
+    Summarize the decision tree into a DataFrame.
+
+    Parameters:
+        clf: A trained DecisionTreeClassifier or DecisionTreeRegressor.
+        feature_names: List of feature names. If None, use the feature indices.
+        class_list: List of class names. If None, use the class indices.
+
+    Returns:
+        A DataFrame with the following columns:
+            leaf_index: The index of the leaf node.
+            feature_name: The name of the feature that splits the node.
+            Sample Size: The number of samples in the leaf node.
+            class_name: The name of the class. If class_list is None, use class indices.
+    """
+    tree = clf.tree_
+    children_left = tree.children_left
+    children_right = tree.children_right
+    features = tree.feature
+    thresholds = tree.threshold
+    values = tree.value
+    n_classes = values.shape[2]
+
+    if class_list is None:
+        class_list = [f'Class {i}' for i in range(n_classes)]
+
+    feature_order: List[str] = []
+    leaf_data: List[Tuple[int, List[Tuple[int, float, str]], int, List[float]]] = []
+
+    def recurse(node_id: int, path_conditions: List[Tuple[int, float, str]]) -> None:
+        """
+        Recursively traverse the decision tree and collect information about the leaf nodes.
+        """
+        if children_left[node_id] == children_right[node_id]:
+            # Leaf node
+            class_counts = values[node_id][0].tolist()
+            total_samples = int(sum(class_counts))
+            leaf_data.append((node_id, path_conditions, total_samples, class_counts))
+            return
+        # Non-leaf node
+        feat_id = features[node_id]
+        thresh = thresholds[node_id]
+        feat_name = feature_names[feat_id] if feature_names else str(feat_id)
+        if feat_name not in feature_order:
+            feature_order.append(feat_name)
+        recurse(children_left[node_id], path_conditions + [(feat_id, thresh, '<=')])
+        recurse(children_right[node_id], path_conditions + [(feat_id, thresh, '>')])
+
+    recurse(0, [])
+
+    rows = []
+    for leaf_id, conditions, sample_size, class_counts in leaf_data:
+        row = {'leaf_index': leaf_id}
+        feat_bounds = {}
+        for feat_id, thresh, ineq in conditions:
+            feat_key = feature_names[feat_id] if feature_names else str(feat_id)
+            if feat_key not in feat_bounds:
+                feat_bounds[feat_key] = {'lower': None, 'upper': None}
+            if ineq == '>':
+                if feat_bounds[feat_key]['lower'] is None or thresh > feat_bounds[feat_key]['lower']:
+                    feat_bounds[feat_key]['lower'] = thresh
+            else:
+                if feat_bounds[feat_key]['upper'] is None or thresh < feat_bounds[feat_key]['upper']:
+                    feat_bounds[feat_key]['upper'] = thresh
+        for feat in feature_order:
+            if feat in feat_bounds:
+                b = feat_bounds[feat]
+                parts = []
+                if b['lower'] is not None:
+                    parts.append(f"> {format_threshold(b['lower'])}")
+                if b['upper'] is not None:
+                    parts.append(f"<= {format_threshold(b['upper'])}")
+                row[feat] = ', '.join(parts)
+            else:
+                row[feat] = ''
+
+        row['Sample Size'] = sample_size
+        for i, cls in enumerate(class_list):
+            row[cls] = int(class_counts[i])
+
+        rows.append(row)
+
+    col_order = ['leaf_index'] + feature_order + ['Sample Size'] + class_list
+    return pd.DataFrame(rows)[col_order]
+
