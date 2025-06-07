@@ -2,13 +2,13 @@ Metadata-Version: 2.4
 Name: format_tree
 Version: 0.1.4
 Summary: Advanced formatting, analysis, and visualization utilities for scikit-learn decision trees.
-Home-page: https://github.com/kk715/format_tree
+Home-page: https://github.com/k_explore/format_tree
 Author: Kathy G
 Author-email: kguo715@gmail.com
 License: MIT
-Project-URL: Documentation, https://github.com/kk715/format_tree#readme
-Project-URL: Source, https://github.com/kk715/format_tree
-Project-URL: Tracker, https://github.com/kk715/format_tree/issues
+Project-URL: Documentation, https://github.com/k_explore/format_tree#readme
+Project-URL: Source, https://github.com/k_explore/format_tree
+Project-URL: Tracker, https://github.com/k_explore/format_tree/issues
 Project-URL: PyPI, https://pypi.org/project/format_tree/
 Keywords: decision tree,visualization,sklearn,matplotlib,pandas,analysis,data science,machine learning
 Classifier: Programming Language :: Python :: 3
