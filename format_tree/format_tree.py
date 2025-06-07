@@ -392,7 +392,7 @@ def summarize_tree(
         # Track which features have missing values in this leaf
         missing_feats = set()
         if display_missing:
-            row['Missing Value'] = 1 if leaf_id in null_nodes else 0
+            row['Missing Value'] = 'Y' if leaf_id in null_nodes else 'N'
             if leaf_id in nulls_in_leaf_nodes:
                 missing_feats = set(nulls_in_leaf_nodes[leaf_id].keys())
 
