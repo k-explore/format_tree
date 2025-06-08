@@ -165,29 +165,11 @@ def plot_formatted_tree(
                 # Adjust threshold formatting based on comparison
                 if comparison == "<=":
                     new_threshold = int(threshold)
-                    if new_threshold < threshold:
-                        updated_content = updated_content.replace(
-                            f"{comparison} {threshold}", 
-                            f"<= {new_threshold}"
-                        )
-                    else:
-                        updated_content = updated_content.replace(
-                            f"{threshold}", 
-                            f"{new_threshold}"
-                        )
-                elif comparison == ">":
-                    new_threshold = int(np.ceil(threshold))
-                    if new_threshold > threshold:
-                        updated_content = updated_content.replace(
-                            f"{comparison} {threshold}", 
-                            f"> {new_threshold-1}"
-                        )
-                    else:
-                        updated_content = updated_content.replace(
-                            f"{threshold}", 
-                            f"{new_threshold}"
-                        )
-        
+                    updated_content = updated_content.replace(
+                        f"{comparison} {threshold}", 
+                        f"<= {new_threshold}"
+                    )
+                   
         # Update the text if it changed
         if updated_content != content:
             text.set_text(updated_content)
@@ -414,7 +396,7 @@ def summarize_tree(
                 parts = []
                 if b['lower'] is not None:
                     if integer_thresholds:
-                        threshold = int(np.ceil(b['lower']))
+                        threshold = int(b['lower'])
                     else:
                         threshold = format_threshold(b['lower'])
                     parts.append(f"> {threshold}") 
