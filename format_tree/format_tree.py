@@ -58,7 +58,7 @@ def plot_formatted_tree(
         raise ValueError("class_display must be 'all' or 'one'")
         
     # Get total training sample size
-    total_samples = int(decision_tree.tree_.n_node_samples[0])
+    total_samples = float(decision_tree.tree_.weighted_n_node_samples[0])
     if total_samples <= 0:
         raise ValueError("Total samples must be greater than 0")
     
@@ -84,6 +84,7 @@ def plot_formatted_tree(
         filled=filled, 
         rounded=rounded,
         node_ids=node_ids,
+        proportion=False,  # Always show absolute numbers
         **kwargs
     )
     
@@ -100,11 +101,8 @@ def plot_formatted_tree(
                 
                 # Format samples if needed
                 if samples_format == "percentage":
-                    samples_percent = (node_samples / total_samples) * 100
-                    if samples_percent == int(samples_percent):
-                        samples_str = f"{int(samples_percent)}%"
-                    else:
-                        samples_str = f"{samples_percent:.{max_decimal_places}f}%"
+                    samples_percent = (100.0 * node_samples / total_samples)
+                    samples_str = str(round(samples_percent, max_decimal_places)) + "%"
                     updated_content = re.sub(
                         r'samples = \d+', 
                         f'samples = {samples_str}', 
@@ -117,7 +115,7 @@ def plot_formatted_tree(
             if value_match:
                 value_str = value_match.group(1)
                 values = [float(v.strip()) for v in value_str.split(',')]
-                
+
                 # Convert values to percentage if needed
                 if value_format == "percentage":
                     formatted_values = []
@@ -156,7 +154,7 @@ def plot_formatted_tree(
                         updated_content = updated_content.replace('samples =', 'samples (with null) =')
                 
         # Format threshold to integer if requested
-        if integer_thresholds and ('<=' in content or '>' in content):
+        if integer_thresholds and ('<=' in content):
             threshold_match = re.search(r'([<=>]+) (\d+\.\d+)', content)
             if threshold_match:
                 comparison = threshold_match.group(1)
@@ -349,9 +347,10 @@ def summarize_tree(
             path_conditions (list): Conditions leading to the current node.
         """
         if children_left[node_id] == children_right[node_id]:  # Leaf node
-            total_samples = tree.n_node_samples[node_id]
-            class_counts = [int(class_weight * total_samples) for class_weight in values[node_id][0]]
-            leaf_data.append((node_id, path_conditions, total_samples, class_counts))
+            total_samples = tree.weighted_n_node_samples[node_id]
+            # class_counts = [int(class_weight * total_samples) for class_weight in values[node_id][0]]
+            class_counts = values[node_id][0] * total_samples
+            leaf_data.append((node_id, path_conditions, int(total_samples), class_counts.astype(int)))
             return
 
         feat_id = feature_ids[node_id]
