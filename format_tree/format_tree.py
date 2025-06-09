@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import re
-from sklearn.tree import plot_tree
+from sklearn.tree import plot_tree, DecisionTreeClassifier
 from typing import List, Optional, Tuple
 
 def plot_formatted_tree(
@@ -278,20 +278,21 @@ def get_nulls_in_leaf_nodes(decision_tree, X_train, columns_to_check, df=None):
 
 
 def summarize_tree(
-    decision_tree,
+    decision_tree: DecisionTreeClassifier,
     feature_names: Optional[List[str]] = None,
     class_list: Optional[List[str]] = None,
     integer_thresholds: bool = False,
     display_missing: bool = True,
-    X_train=None,
-    df: pd.DataFrame = None,
-    columns_to_check: List[str] = None
+    X_train: Optional[pd.DataFrame] = None,
+    df: Optional[pd.DataFrame] = None,
+    columns_to_check: Optional[List[str]] = None,
+    precision: int = 3,
 ) -> pd.DataFrame:
     """
     Summarizes a decision tree by traversing its nodes and collecting data about each leaf.
 
     Parameters:
-        decision_tree: A trained decision tree model.
+        decision_tree: DecisionTreeClassifier.
         feature_names (list of str, optional): List of feature names.
         class_list (list of str, optional): List of class names.
         integer_thresholds (bool, optional): Flag to format thresholds as integers.
@@ -299,6 +300,7 @@ def summarize_tree(
         X_train: Feature data used to train the decision tree.
         df: DataFrame containing the data used to train the decision tree, if None, X_train is used.
         columns_to_check: List of columns to check for null values in each leaf node.
+        precision: Number of decimal places to round values.
 
     Returns:
         pd.DataFrame: DataFrame containing leaf node conditions, sample sizes, and class distributions.
@@ -306,14 +308,15 @@ def summarize_tree(
     if decision_tree is None:
         raise ValueError("decision_tree must be a trained decision tree model.")
 
+    # Extract tree properties
     tree = decision_tree.tree_
     children_left = tree.children_left
     children_right = tree.children_right
     feature_ids = tree.feature
     thresholds = tree.threshold
-    values = tree.value  # shape: (n_nodes, 1, n_classes)
-    n_classes = values.shape[2]
+    n_classes = tree.value.shape[2]
 
+    # Handle missing values if display_missing is True
     if display_missing:
         if X_train is None:
             raise ValueError("If display_missing is True, X_train (feature data) must be provided.")
@@ -325,6 +328,7 @@ def summarize_tree(
         nulls_in_leaf_nodes = {}
         null_nodes = []
 
+    # Set default class list if not provided
     if class_list is None:
         class_list = [f'Class {i}' for i in range(n_classes)]
 
@@ -348,9 +352,27 @@ def summarize_tree(
         """
         if children_left[node_id] == children_right[node_id]:  # Leaf node
             total_samples = tree.weighted_n_node_samples[node_id]
-            # class_counts = [int(class_weight * total_samples) for class_weight in values[node_id][0]]
-            class_counts = values[node_id][0] * total_samples
-            leaf_data.append((node_id, path_conditions, int(total_samples), class_counts.astype(int)))
+            if tree.n_outputs == 1:  # Check if the decision tree has only one output
+                value = tree.value[node_id][0, :]
+            else:
+                value = tree.value[node_id]
+
+            # Determine class distribution or regression value
+            if tree.n_classes[0] != 1:  # Check if the tree is a classification tree
+                value_pct = value
+                value = value * tree.weighted_n_node_samples[node_id]
+
+            if tree.n_classes[0] == 1:
+                class_counts = np.around(value, precision)
+            elif np.all(np.equal(np.mod(value, 1), 0)):
+                class_counts = value.astype(int)
+            else:
+                class_counts = np.around(value, precision)
+
+            if tree.n_classes[0] != 1:
+                leaf_data.append((node_id, path_conditions, int(total_samples), class_counts, value_pct))
+            else:
+                leaf_data.append((node_id, path_conditions, int(total_samples), class_counts, None))
             return
 
         feat_id = feature_ids[node_id]
@@ -360,23 +382,25 @@ def summarize_tree(
         if feat_name not in feature_order:
             feature_order.append(feat_name)
 
+        # Recurse for left and right children
         traverse(children_left[node_id], path_conditions + [(feat_id, thresh, '<=')])
         traverse(children_right[node_id], path_conditions + [(feat_id, thresh, '>')])
 
-    traverse(0, [])
+    traverse(0, [])  # Start traversal from the root node
 
     rows = []  # List to store row data for DataFrame
-    for leaf_id, conditions, sample_size, class_counts in leaf_data:
+    for leaf_id, conditions, sample_size, class_counts, value_pct in leaf_data:
         row = {'leaf_index': leaf_id}
         feat_bounds = {}  # Stores the bounds for features
+        missing_feats = set()  # Track which features have missing values
 
-        # Track which features have missing values in this leaf
-        missing_feats = set()
+        # Handle missing value tracking
         if display_missing:
             row['Missing Value'] = 'Y' if leaf_id in null_nodes else 'N'
             if leaf_id in nulls_in_leaf_nodes:
                 missing_feats = set(nulls_in_leaf_nodes[leaf_id].keys())
 
+        # Determine feature bounds
         for feat_id, thresh, ineq in conditions:
             feat_key = feature_names[feat_id] if feature_names else feat_id
             if feat_key not in feat_bounds:
@@ -389,43 +413,37 @@ def summarize_tree(
                 if feat_bounds[feat_key]['upper'] is None or thresh < feat_bounds[feat_key]['upper']:
                     feat_bounds[feat_key]['upper'] = thresh
 
+        # Format feature bounds and handle missing data
         for feat in feature_order:
             if feat in feat_bounds:
                 b = feat_bounds[feat]
                 parts = []
                 if b['lower'] is not None:
-                    if integer_thresholds:
-                        threshold = int(b['lower'])
-                    else:
-                        threshold = format_threshold(b['lower'])
+                    threshold = int(b['lower']) if integer_thresholds else format_threshold(b['lower'])
                     parts.append(f"> {threshold}") 
                 if b['upper'] is not None:
-                    if integer_thresholds:
-                        threshold = int(b['upper'])
-                    else:
-                        threshold = format_threshold(b['upper'])
+                    threshold = int(b['upper']) if integer_thresholds else format_threshold(b['upper'])
                     parts.append(f"<= {threshold}")
-                # Add "Missing" if this feature is missing in this leaf
                 if feat in missing_feats:
                     parts.append("Missing")
                 row[feat] = ', '.join(parts)
             else:
-                # Add "Missing" if this feature is missing in this leaf (even if no bounds)
-                if feat in missing_feats:
-                    row[feat] = "Missing"
-                else:
-                    row[feat] = ''
+                row[feat] = "Missing" if feat in missing_feats else ''
 
+        # Populate row with sample size and class information
         row['Sample Size'] = sample_size
         for i, cls in enumerate(class_list):
             row[cls] = int(class_counts[i])
+            row[f"{cls}%"] = value_pct[i] if value_pct is not None else None
 
         rows.append(row)
 
+    # Define column order for DataFrame
     if display_missing:
-        col_order = ['leaf_index'] + feature_order + ['Missing Value','Sample Size'] + class_list
+        col_order = ['leaf_index'] + feature_order + ['Missing Value', 'Sample Size'] + class_list + [f"{cls}%" for cls in class_list]
     else:
-        col_order = ['leaf_index'] + feature_order + ['Sample Size'] + class_list
+        col_order = ['leaf_index'] + feature_order + ['Sample Size'] + class_list + [f"{cls}%" for cls in class_list]
+
     return pd.DataFrame(rows)[col_order]
 
 
