@@ -64,4 +64,4 @@ MIT
 https://pypi.org/project/format_tree/
 
 ## GitHub
-https://github.com/k_explore/format_tree
+https://github.com/k-explore/format_tree

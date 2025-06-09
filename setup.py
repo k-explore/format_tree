@@ -9,7 +9,7 @@ except Exception:
 
 setup(
     name="format_tree",
-    version="0.2.0",
+    version="0.2.1",
     description="Advanced formatting, analysis, and visualization utilities for scikit-learn decision trees.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -23,11 +23,11 @@ setup(
         "pandas>=1.0"
     ],
     python_requires=">=3.7",
-    url="https://github.com/k_explore/format_tree",
+    url="https://github.com/k-explore/format_tree",
     project_urls={
-        "Documentation": "https://github.com/k_explore/format_tree#readme",
-        "Source": "https://github.com/k_explore/format_tree",
-        "Tracker": "https://github.com/k_explore/format_tree/issues",
+        "Documentation": "https://github.com/k-explore/format_tree#readme",
+        "Source": "https://github.com/k-explore/format_tree",
+        "Tracker": "https://github.com/k-explore/format_tree/issues",
         "PyPI": "https://pypi.org/project/format_tree/"
     },
     include_package_data=True,
