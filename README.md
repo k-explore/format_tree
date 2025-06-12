@@ -57,6 +57,28 @@ summary_df = summarize_tree(
 print(summary_df.head())
 ```
 
+### Summarize tree structure as a DataFrame (with class percentages)
+```python
+from format_tree import summarize_tree
+summary_df = summarize_tree(
+    decision_tree,
+    feature_names=feature_names,
+    class_list=class_names,
+    display_missing=True,      # Show missing value info if desired
+    X_train=X,                 # Pass your training data if using display_missing
+    columns_to_check=["feature1", "feature2"]
+)
+print(summary_df.head())
+# The output DataFrame includes columns for each class and their percentage (e.g., 'class1', 'class1%')
+```
+
+### Convert feature text columns to standardized range format
+```python
+from format_tree import convert_text_to_number_column
+summary_df = convert_text_to_number_column(summary_df, 'feature1', min_value=0, max_value=10)
+print(summary_df.head())
+```
+
 ## License
 MIT
 

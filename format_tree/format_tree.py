@@ -447,3 +447,94 @@ def summarize_tree(
     return pd.DataFrame(rows)[col_order]
 
 
+def convert_text_to_number_column(
+    df: pd.DataFrame, 
+    column_name: str, 
+    min_value: int = 1, 
+    max_value: int = 20
+) -> pd.DataFrame:
+    """
+    Converts text descriptions of numerical ranges in a DataFrame column to standardized range text.
+
+    Parameters:
+        df (pd.DataFrame): The DataFrame containing the column to be processed.
+        column_name (str): The name of the column in the DataFrame that contains text descriptions of numerical ranges.
+        min_value (int, optional): The minimum possible value for the range. Defaults to 1.
+        max_value (int, optional): The maximum possible value for the range. Defaults to 20.
+
+    Returns:
+        pd.DataFrame: The original DataFrame with an additional column named '{column_name}_range', containing the 
+                      standardized range text for each entry in the specified column.
+    """
+
+    def extract_bounds(text: str) -> Tuple[Optional[int], Optional[int]]:
+        """
+        Extracts the lower and upper bounds from a text description of a numerical range.
+
+        Parameters:
+            text (str): The text description of the numerical range.
+
+        Returns:
+            tuple: A tuple containing the lower bound and upper bound of the range, or (None, None) if the text does not describe a range.
+        """
+
+        text = str(text)
+        # Remove ", Missing" if present
+        cleaned = text.split(", Missing")[0].strip()
+
+        # Case: "<= number"
+        match_le = re.match(r"<=\s*(\d+)", cleaned)
+        if match_le:
+            lower = min_value
+            upper = int(match_le.group(1))
+            return lower, upper
+
+        # Case: "> number1, <= number2"
+        match_between = re.match(r">\s*(\d+).*<=\s*(\d+)", cleaned)
+        if match_between:
+            lower = int(match_between.group(1)) + 1
+            upper = int(match_between.group(2))
+            return lower, upper
+
+        # Case: "> number"
+        match_gt = re.match(r">\s*(\d+)", cleaned)
+        if match_gt:
+            lower = int(match_gt.group(1)) + 1
+            upper = max_value
+            return lower, upper
+
+        return None, None
+
+    def make_range_text(row: pd.Series) -> str:
+        """
+        Transforms a numerical range description into a human-readable text representation.
+
+        Parameters:
+            row (pd.Series): A row of a DataFrame containing the range description.
+
+        Returns:
+            str: A human-readable text representation of the range. If the row contains a missing value, the returned string will include ", Missing".
+        """
+        lower, upper = extract_bounds(row[column_name])
+        range_text = ""
+
+        if lower is not None and upper is not None:
+            if upper - lower == 1:
+                range_text = f"{lower}, {upper}"
+            else:
+                range_text = f"{lower} - {upper}"
+        elif lower is not None:
+            range_text = f"{lower}"
+        else:
+            range_text = ""
+
+        if row.get('Missing Value', '') == 'Y':
+            if len(range_text) > 0:
+                range_text += ", Missing"
+            else:
+                range_text = "Missing"
+
+        return range_text
+
+    df[f'{column_name}_range'] = df.apply(make_range_text, axis=1)
+    return df
