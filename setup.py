@@ -9,7 +9,7 @@ except Exception:
 
 setup(
     name="format_tree",
-    version="0.2.2",
+    version="0.2.3",
     description="Advanced formatting, analysis, and visualization utilities for scikit-learn decision trees.",
     long_description=long_description,
     long_description_content_type="text/markdown",

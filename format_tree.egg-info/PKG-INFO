@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: format_tree
-Version: 0.2.2
+Version: 0.2.3
 Summary: Advanced formatting, analysis, and visualization utilities for scikit-learn decision trees.
 Home-page: https://github.com/k-explore/format_tree
 Author: Kathy G

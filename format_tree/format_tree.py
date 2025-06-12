@@ -521,6 +521,8 @@ def convert_text_to_number_column(
         if lower is not None and upper is not None:
             if upper - lower == 1:
                 range_text = f"{lower}, {upper}"
+            elif lower == upper:
+                range_text = f"{lower}"
             else:
                 range_text = f"{lower} - {upper}"
         elif lower is not None:
